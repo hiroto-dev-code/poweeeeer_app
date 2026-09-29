@@ -1,0 +1,553 @@
+<title>筋トレ・ラン記録</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@500;600&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* Layout: one narrow column, like a gym notebook. Plate colors carry meaning: red = 筋トレ, blue = ラン, yellow = 自己ベスト. */
+:root{
+  --bg:#EDEFEA; --surface:#F9FAF7; --sunk:#E3E6E0; --ink:#1A1E1C; --muted:#5E6661; --line:#D3D8D1;
+  --lift:#C8352B; --lift-soft:#F3DAD6; --run:#2458A6; --run-soft:#D8E2F2; --gold:#C98F0E; --gold-soft:#F5E6BE; --empty:#DDE1DA;
+  --display:"Dela Gothic One","Hiragino Sans","Noto Sans JP",sans-serif;
+  --body:"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP","Yu Gothic",sans-serif;
+  --num:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#131614; --surface:#1C201D; --sunk:#252A26; --ink:#E9ECE6; --muted:#9AA39C; --line:#2F3531;
+  --lift:#E5574B; --lift-soft:#3F2523; --run:#6A9BE6; --run-soft:#1F2C42; --gold:#E8B93A; --gold-soft:#3A3220; --empty:#262B27; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#131614; --surface:#1C201D; --sunk:#252A26; --ink:#E9ECE6; --muted:#9AA39C; --line:#2F3531;
+  --lift:#E5574B; --lift-soft:#3F2523; --run:#6A9BE6; --run-soft:#1F2C42; --gold:#E8B93A; --gold-soft:#3A3220; --empty:#262B27; color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.6}
+.wrap{max-width:760px;margin:0 auto;padding-inline:16px;padding-block:20px 64px;display:flex;flex-direction:column;gap:16px}
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--display);font-weight:400;font-size:26px;line-height:1.2;margin:0;letter-spacing:.02em}
+h1 .dot{color:var(--lift)}
+.sub{color:var(--muted);font-size:13px;margin:2px 0 0}
+h2{font-size:15px;font-weight:700;margin:0;text-wrap:balance}
+.num{font-family:var(--num);font-variant-numeric:tabular-nums}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--run);outline-offset:2px}
+
+.tabs{display:flex;gap:4px;background:var(--sunk);padding:4px;border-radius:12px;position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
+.tabs button{flex:1;border:0;background:transparent;padding:9px 6px;border-radius:9px;font-weight:700;color:var(--muted)}
+.tabs button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+
+.banner{background:var(--gold-soft);border-radius:var(--r);padding:10px 14px;font-size:13px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.card-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.hint{color:var(--muted);font-size:12px}
+
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;min-width:0}
+.stat .label{font-size:12px;color:var(--muted);letter-spacing:.04em}
+.stat .val{font-family:var(--num);font-size:26px;font-weight:600;line-height:1.3}
+.stat .val small{font-size:13px;color:var(--muted);font-weight:500;margin-left:2px}
+.week{display:flex;gap:4px;margin-top:8px}
+.week span{flex:1;height:22px;border-radius:5px;background:var(--empty);font-size:10px;display:grid;place-items:center;color:var(--muted)}
+.week span.lift{background:var(--lift);color:#fff}
+.week span.run{background:var(--run);color:#fff}
+.week span.today{outline:2px solid var(--ink);outline-offset:1px}
+@media (max-width:560px){.stats{grid-template-columns:1fr 1fr}.stats .stat:last-child{grid-column:1/-1}}
+
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-size:13px}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+#part-chips .chip{font-weight:700;padding:6px 14px}
+#part-chips .chip[aria-pressed="true"]{background:var(--lift);border-color:var(--lift);color:#fff}
+#ex-chips{padding-top:10px;border-top:1px dashed var(--line)}
+.chart{width:100%;overflow-x:auto}
+.chart svg{display:block;width:100%;height:auto;min-width:320px}
+.progress{display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center}
+.progress .big{font-family:var(--num);font-size:22px;font-weight:600}
+.delta{font-family:var(--num);font-weight:600;color:var(--gold);background:var(--gold-soft);padding:2px 8px;border-radius:6px}
+.plates{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+
+.cal{display:grid;grid-template-rows:repeat(7,1fr);grid-auto-flow:column;grid-auto-columns:1fr;gap:3px;overflow-x:auto}
+.cal span{aspect-ratio:1;border-radius:3px;background:var(--empty);max-width:100%;position:relative}
+.cal span.lift{background:var(--lift)}
+.cal span.run{background:var(--run)}
+.cal span.both::after{content:"";position:absolute;right:15%;bottom:15%;width:35%;height:35%;border-radius:50%;background:var(--run);border:1px solid var(--surface)}
+.cal span.future{background:transparent}
+
+/* form */
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label,.lbl{font-size:12px;color:var(--muted);font-weight:500;letter-spacing:.04em}
+input,select,textarea{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px;width:100%;min-width:0}
+input[type=number]{font-family:var(--num)}
+textarea{resize:vertical;min-height:60px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg label{flex:1;min-width:90px;position:relative}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg span{display:block;text-align:center;border:1px solid var(--line);border-radius:8px;padding:9px 8px;font-weight:700;background:var(--bg)}
+.seg input:checked+span{color:#fff;border-color:transparent}
+.seg input:focus-visible+span{outline:2px solid var(--run);outline-offset:2px}
+.seg .k-lift input:checked+span{background:var(--lift)}
+.seg .k-run input:checked+span,.seg .k-cardio input:checked+span{background:var(--run)}
+.seg .k-none input:checked+span{background:var(--muted)}
+.ex-list{display:flex;flex-direction:column;gap:10px}
+.ex{display:grid;grid-template-columns:90px 1fr 84px 70px 70px 36px;gap:8px;align-items:end;padding:10px;border-radius:8px;background:var(--sunk)}
+.ex .rm{border:0;background:transparent;color:var(--muted);height:40px;font-size:18px;border-radius:8px}
+.ex .rm:hover{background:var(--surface);color:var(--lift)}
+.ex .prev{grid-column:1/-1;font-size:12px;color:var(--muted);margin-top:-4px}
+@media (max-width:600px){
+  .ex{grid-template-columns:1fr 1fr 1fr 36px}
+  .ex .f-part{grid-column:1/2}.ex .f-name{grid-column:2/-1}
+  .ex .rm{grid-column:4}
+}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:9px 14px;font-weight:700}
+.btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink);padding:12px 18px;font-size:16px}
+.btn.ghost{border-style:dashed;color:var(--muted)}
+.btn.danger{background:var(--lift);color:#fff;border-color:var(--lift)}
+.editbar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;background:var(--run-soft);color:var(--run);font-weight:700;border-radius:8px;padding:8px 12px}
+.err{color:var(--lift);font-size:13px;min-height:1em}
+
+/* history */
+.month{font-size:12px;color:var(--muted);font-weight:700;letter-spacing:.08em;margin:8px 0 -4px}
+.entry{display:grid;grid-template-columns:64px 1fr auto;gap:12px;align-items:start;padding:12px 14px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+.entry .d{font-family:var(--num);font-weight:600;font-size:18px;line-height:1.2}
+.entry .d small{display:block;font-family:var(--body);font-size:12px;color:var(--muted);font-weight:500}
+.entry ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px;min-width:0}
+.entry li{font-size:14px;overflow-wrap:anywhere}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:5px;margin-right:6px;vertical-align:1px}
+.tag.lift{background:var(--lift-soft);color:var(--lift)}
+.tag.run{background:var(--run-soft);color:var(--run)}
+.tag.pr{background:var(--gold-soft);color:var(--gold)}
+.entry .memo{color:var(--muted);font-size:13px}
+.entry .acts{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+.linkbtn{border:0;background:transparent;color:var(--muted);font-size:12px;padding:4px 6px;border-radius:6px}
+.linkbtn:hover{color:var(--lift);background:var(--sunk)}
+.empty{color:var(--muted);text-align:center;padding:24px}
+
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:700;box-shadow:0 6px 20px rgba(0,0,0,.2);max-width:calc(100% - 32px);z-index:20}
+.toast.pr{background:var(--gold);color:#1A1E1C}
+footer{color:var(--muted);font-size:12px;text-align:center}
+@media (prefers-reduced-motion:no-preference){.toast{animation:pop .25s ease-out}@keyframes pop{from{transform:translate(-50%,8px);opacity:0}}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>筋トレ<span class="dot">・</span>ラン記録</h1>
+      <p class="sub">持ち上げた重さと、走った距離を積み上げる。</p>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" id="tab-home" aria-selected="true" data-tab="home">ホーム</button>
+    <button role="tab" id="tab-add" aria-selected="false" data-tab="add">記録する</button>
+    <button role="tab" id="tab-hist" aria-selected="false" data-tab="hist">履歴</button>
+  </nav>
+
+  <div id="sample-banner" class="banner" hidden>いま表示しているのは<b>サンプルデータ</b>です。「記録する」から最初の記録を保存すると、あなたの記録に切り替わります。</div>
+
+  <!-- HOME -->
+  <section id="view-home" style="display:flex;flex-direction:column;gap:16px">
+    <div class="stats">
+      <div class="stat"><div class="label">今月の活動日</div><div class="val" id="s-days">0<small>日</small></div></div>
+      <div class="stat"><div class="label">今月の有酸素距離</div><div class="val" id="s-km">0<small>km</small></div></div>
+      <div class="stat"><div class="label">今週（月〜日）</div><div class="week" id="s-week"></div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>重量の伸び</h2><span class="hint">各日の最大重量 ・ <span style="color:var(--gold)">●</span> 自己ベスト更新</span></div>
+      <div class="chips" id="part-chips" aria-label="部位"></div>
+      <div class="chips" id="ex-chips" aria-label="種目"></div>
+      <div class="chart" id="w-chart"></div>
+      <div class="progress" id="w-progress"></div>
+      <div class="plates" id="w-plates"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>週ごとの有酸素距離</h2>
+        <div class="legend"><span><i style="background:var(--run)"></i>ラン日</span><span><i style="background:var(--lift)"></i>筋トレ後</span></div></div>
+      <div class="chart" id="d-chart"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>直近12週の活動</h2>
+        <div class="legend"><span><i style="background:var(--lift)"></i>筋トレ</span><span><i style="background:var(--run)"></i>ラン</span><span><i style="background:var(--empty)"></i>休み</span></div></div>
+      <div class="cal" id="cal"></div>
+    </div>
+  </section>
+
+  <!-- ADD -->
+  <section id="view-add" hidden>
+    <form class="card" id="form" novalidate>
+      <div class="editbar" id="edit-bar" hidden><span id="edit-label"></span><button type="button" class="linkbtn" id="edit-cancel">編集をやめる</button></div>
+      <div class="row">
+        <div class="field"><label for="f-date">実施日</label><input type="date" id="f-date" required></div>
+        <div class="field"><span class="lbl">種類</span>
+          <div class="seg">
+            <label class="k-lift"><input type="radio" name="kind" id="k-lift" value="lift" checked><span>筋トレ</span></label>
+            <label class="k-run"><input type="radio" name="kind" id="k-run" value="run"><span>ラン</span></label>
+          </div>
+        </div>
+      </div>
+
+      <div id="lift-fields" style="display:flex;flex-direction:column;gap:12px">
+        <span class="lbl">種目（部位・内容・重量）</span>
+        <div class="ex-list" id="ex-list"></div>
+        <button type="button" class="btn ghost" id="add-ex">＋ 種目を追加</button>
+
+        <div class="field"><span class="lbl">筋トレ後の有酸素運動</span>
+          <div class="seg">
+            <label class="k-none"><input type="radio" name="cardio" id="c-none" value="" checked><span>なし</span></label>
+            <label class="k-cardio"><input type="radio" name="cardio" id="c-run" value="ランニング"><span>ランニング</span></label>
+            <label class="k-cardio"><input type="radio" name="cardio" id="c-jog" value="ジョギング"><span>ジョギング</span></label>
+          </div>
+        </div>
+        <div class="row" id="cardio-extra" hidden>
+          <div class="field"><label for="c-km">距離（km）</label><input type="number" id="c-km" min="0" step="0.1" inputmode="decimal" placeholder="2.0"></div>
+          <div class="field"><label for="c-min">時間（分・任意）</label><input type="number" id="c-min" min="0" step="1" inputmode="numeric" placeholder="15"></div>
+        </div>
+      </div>
+
+      <div id="run-fields" hidden style="display:flex;flex-direction:column;gap:12px">
+        <div class="field"><span class="lbl">内容</span>
+          <div class="seg">
+            <label class="k-cardio"><input type="radio" name="runtype" id="r-run" value="ランニング" checked><span>ランニング</span></label>
+            <label class="k-cardio"><input type="radio" name="runtype" id="r-jog" value="ジョギング"><span>ジョギング</span></label>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field"><label for="r-km">距離（km）</label><input type="number" id="r-km" min="0" step="0.1" inputmode="decimal" placeholder="5.0"></div>
+          <div class="field"><label for="r-min">時間（分・任意）</label><input type="number" id="r-min" min="0" step="1" inputmode="numeric" placeholder="30"></div>
+        </div>
+      </div>
+
+      <div class="field"><label for="f-memo">メモ（任意）</label><textarea id="f-memo" placeholder="調子、フォームの気づきなど"></textarea></div>
+      <div class="err" id="f-err"></div>
+      <button type="submit" class="btn primary" id="save-btn">記録を保存</button>
+    </form>
+    <div id="ex-datalists"></div>
+  </section>
+
+  <!-- HISTORY -->
+  <section id="view-hist" hidden style="display:flex;flex-direction:column;gap:10px">
+    <div id="hist"></div>
+  </section>
+
+  <footer id="storage-note">記録はこのブラウザに保存されます。</footer>
+</div>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+const PARTS=['胸','背中','脚','肩','腕','腹','その他'];
+const PRESETS={
+  '胸':['ベンチプレス','ダンベルプレス','インクラインベンチプレス','インクラインダンベルプレス','ダンベルフライ','チェストプレス','ペックフライ','ディップス','腕立て伏せ'],
+  '背中':['デッドリフト','ラットプルダウン','ベントオーバーロウ','シーテッドロウ','ワンハンドロウ','懸垂','バックエクステンション'],
+  '脚':['スクワット','レッグプレス','ブルガリアンスクワット','レッグエクステンション','レッグカール','ランジ','ルーマニアンデッドリフト','カーフレイズ'],
+  '肩':['ショルダープレス','ダンベルショルダープレス','サイドレイズ','フロントレイズ','リアレイズ','アップライトロウ'],
+  '腕':['アームカール','ハンマーカール','プリーチャーカール','トライセプスエクステンション','ケーブルプッシュダウン','ナローベンチプレス'],
+  '腹':['クランチ','レッグレイズ','アブローラー','プランク','ケーブルクランチ'],
+  'その他':[]
+};
+let selPart=null;
+const DOW='日月火水木金土';
+const LS_KEY='trainlog.records.v1';
+let records=[], mode='local', db=null, selEx=null;
+
+/* ---------- dates ---------- */
+const pad=n=>String(n).padStart(2,'0');
+const ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const parse=s=>{const[a,b,c]=s.split('-').map(Number);return new Date(a,b-1,c)};
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const monday=d=>{const x=new Date(d.getFullYear(),d.getMonth(),d.getDate());const w=(x.getDay()+6)%7;return addDays(x,-w)};
+const TODAY=()=>{const n=new Date();return new Date(n.getFullYear(),n.getMonth(),n.getDate())};
+const fmt=(n,d=1)=>{const v=Math.round(n*10**d)/10**d;return Number.isInteger(v)?String(v):v.toFixed(d)};
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- sample data (shown only while you have no records) ---------- */
+function makeSamples(){
+  const out=[];const t=TODAY();const start=addDays(monday(t),-7*7);
+  let i=0;
+  for(let d=new Date(start);d<=t;d=addDays(d,1)){
+    const w=d.getDay(),wk=Math.floor((d-start)/864e5/7);
+    if(w===1||w===4){
+      const push=w===1;
+      out.push({id:'s'+(i++),date:ymd(d),kind:'lift',
+        exercises: push?[
+          {part:'胸',name:'ベンチプレス',weight:50+Math.floor(wk/2)*2.5,reps:8,sets:3},
+          {part:'肩',name:'ショルダープレス',weight:20+Math.floor(wk/3)*2.5,reps:10,sets:3},
+          {part:'腕',name:'アームカール',weight:10+Math.floor(wk/4)*1,reps:12,sets:3}
+        ]:[
+          {part:'脚',name:'スクワット',weight:60+Math.floor(wk/2)*5,reps:8,sets:3},
+          {part:'背中',name:'ラットプルダウン',weight:40+Math.floor(wk/2)*2.5,reps:10,sets:3}
+        ],
+        cardio: wk%2===0||push?{type:'ジョギング',km:2+(wk%3)*0.5,min:15}:null,memo:''});
+    } else if(w===2||w===6){
+      if(w===2&&wk%3===1) continue;
+      out.push({id:'s'+(i++),date:ymd(d),kind:'run',exercises:[],cardio:{type:w===6?'ランニング':'ジョギング',km:w===6?5+wk*0.3:3.5,min:w===6?30+wk:25},memo:''});
+    }
+  }
+  return out;
+}
+const SAMPLES=makeSamples();
+const data=()=>records.length?records:SAMPLES;
+
+/* ---------- storage ---------- */
+function loadLocal(){try{const v=JSON.parse(localStorage.getItem(LS_KEY)||'[]');return Array.isArray(v)?v:[]}catch(e){return[]}}
+function saveLocal(){try{localStorage.setItem(LS_KEY,JSON.stringify(records))}catch(e){}}
+async function persist(rec){
+  if(mode==='db'){await db.collection('workouts').doc(rec.id).set(rec);}
+  else{records=records.filter(r=>r.id!==rec.id).concat(rec);saveLocal();renderAll();}
+}
+async function remove(id){
+  if(mode==='db'){await db.collection('workouts').doc(id).delete();}
+  else{records=records.filter(r=>r.id!==id);saveLocal();renderAll();}
+}
+async function connect(){
+  let d=null;
+  try{d=window.claude&&window.claude.use?await window.claude.use('db'):null}catch(e){d=null}
+  if(!d)return;
+  db=d;mode='db';
+  document.getElementById('storage-note').textContent='記録はこのページに保存され、どの端末から開いても同じ記録が見られます。';
+  db.collection('workouts').onSnapshot(snap=>{
+    records=snap.docs.map(s=>({...s.data(),id:s.id}));renderAll();
+  },()=>{});
+}
+
+/* ---------- derived ---------- */
+function sorted(){return data().slice().sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:(a.createdAt||0)-(b.createdAt||0))}
+function exerciseSeries(name){
+  const byDate={};
+  for(const r of sorted())for(const e of r.exercises||[])if(e.name===name&&e.weight>0){byDate[r.date]=Math.max(byDate[r.date]||0,+e.weight)}
+  let best=-1;return Object.keys(byDate).sort().map(d=>{const w=byDate[d];const pr=w>best;if(pr)best=w;return{date:d,w,pr}});
+}
+function exerciseNames(part){
+  const c={},p=exerciseParts();for(const r of data())for(const e of r.exercises||[])if(e.name)c[e.name]=(c[e.name]||0)+1;
+  return Object.keys(c).filter(n=>!part||p[n]===part).sort((a,b)=>c[b]-c[a]);
+}
+function exerciseParts(){const p={};for(const r of sorted())for(const e of r.exercises||[])if(e.name)p[e.name]=e.part||'その他';return p}
+function partsWithData(){const p=exerciseParts(),c={};for(const n in p)c[p[n]]=1;return PARTS.filter(x=>c[x])}
+function lastOf(name,beforeDate){
+  let hit=null;for(const r of sorted())if(!beforeDate||r.date<=beforeDate)for(const e of r.exercises||[])if(e.name===name)hit={...e,date:r.date};return hit;
+}
+function bestOf(name,excludeId){let b=0;for(const r of data())if(r.id!==excludeId)for(const e of r.exercises||[])if(e.name===name)b=Math.max(b,+e.weight||0);return b}
+
+/* ---------- home ---------- */
+function renderStats(){
+  const t=TODAY(),ym=ymd(t).slice(0,7),all=data();
+  const days=new Set(all.filter(r=>r.date.startsWith(ym)).map(r=>r.date)).size;
+  const km=all.filter(r=>r.date.startsWith(ym)&&r.cardio).reduce((s,r)=>s+(+r.cardio.km||0),0);
+  document.getElementById('s-days').innerHTML=days+'<small>日</small>';
+  document.getElementById('s-km').innerHTML=fmt(km)+'<small>km</small>';
+  const m=monday(t),byDate={};for(const r of all){(byDate[r.date]=byDate[r.date]||new Set()).add(r.kind)}
+  let h='';for(let i=0;i<7;i++){const d=addDays(m,i),k=byDate[ymd(d)];const cls=k?(k.has('lift')?'lift':'run'):'';h+=`<span class="${cls}${ymd(d)===ymd(t)?' today':''}">${'月火水木金土日'[i]}</span>`}
+  document.getElementById('s-week').innerHTML=h;
+}
+function renderChips(){
+  const parts=partsWithData();
+  if(!parts.includes(selPart)){const p=exerciseParts();selPart=(selEx&&p[selEx])||parts[0]||null}
+  document.getElementById('part-chips').innerHTML=parts.map(p=>`<button type="button" class="chip" aria-pressed="${p===selPart}" data-part="${esc(p)}">${esc(p)}</button>`).join('');
+  const names=exerciseNames(selPart);if(!names.includes(selEx))selEx=names[0]||null;
+  document.getElementById('ex-chips').innerHTML=names.map(n=>`<button type="button" class="chip" aria-pressed="${n===selEx}" data-ex="${esc(n)}">${esc(n)}</button>`).join('');
+}
+function niceStep(range){const raw=range/4;const opts=[1,2.5,5,10,20,25,50];return opts.find(o=>o>=raw)||100}
+function renderWeightChart(){
+  const el=document.getElementById('w-chart'),pg=document.getElementById('w-progress'),pl=document.getElementById('w-plates');
+  if(!selEx){el.innerHTML='<p class="empty">筋トレを記録すると、ここに重量の推移が出ます。</p>';pg.innerHTML='';pl.innerHTML='';return}
+  const s=exerciseSeries(selEx);
+  const W=640,H=240,L=44,R=56,T=18,B=30;
+  const ws=s.map(p=>p.w);let lo=Math.min(...ws),hi=Math.max(...ws);
+  const step=niceStep(Math.max(hi-lo,5));lo=Math.floor((lo-step*0.5)/step)*step;hi=Math.ceil((hi+step*0.5)/step)*step;if(lo<0)lo=0;
+  const t0=parse(s[0].date).getTime(),t1=parse(s[s.length-1].date).getTime(),span=Math.max(t1-t0,864e5);
+  const X=d=>s.length===1?L+(W-L-R)/2:L+(parse(d).getTime()-t0)/span*(W-L-R);
+  const Y=v=>T+(hi-v)/(hi-lo)*(H-T-B);
+  let g='';
+  for(let v=lo;v<=hi+1e-9;v+=step){g+=`<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${L-8}" y="${Y(v)+4}" text-anchor="end" font-size="11" fill="var(--muted)" font-family="IBM Plex Mono,monospace">${fmt(v)}</text>`}
+  // x labels: first, middle, last
+  const idx=[...new Set([0,Math.floor((s.length-1)/2),s.length-1])];
+  for(const i of idx){const d=parse(s[i].date);g+=`<text x="${X(s[i].date)}" y="${H-8}" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="IBM Plex Mono,monospace">${d.getMonth()+1}/${d.getDate()}</text>`}
+  g+=`<text x="${L-8}" y="${T-6}" text-anchor="end" font-size="10" fill="var(--muted)">kg</text>`;
+  // step line (weight holds until next session)
+  let path='';s.forEach((p,i)=>{const x=X(p.date),y=Y(p.w);path+=i?`L${x},${y}`:`M${x},${y}`});
+  const area=path+`L${X(s[s.length-1].date)},${Y(lo)}L${X(s[0].date)},${Y(lo)}Z`;
+  g+=`<path d="${area}" fill="var(--lift)" opacity=".12"/><path d="${path}" fill="none" stroke="var(--lift)" stroke-width="2.5" stroke-linejoin="round"/>`;
+  s.forEach((p,i)=>{const last=i===s.length-1;g+=`<circle cx="${X(p.date)}" cy="${Y(p.w)}" r="${p.pr&&i>0?5.5:last?5:3.5}" fill="${p.pr&&i>0?'var(--gold)':'var(--lift)'}" stroke="var(--surface)" stroke-width="2"><title>${p.date} ${fmt(p.w,2)}kg</title></circle>`});
+  const lp=s[s.length-1];g+=`<text x="${X(lp.date)+10}" y="${Y(lp.w)+4}" font-size="13" font-weight="600" fill="var(--ink)" font-family="IBM Plex Mono,monospace">${fmt(lp.w,2)}</text>`;
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(selEx)}の重量推移">${g}</svg>`;
+  const first=s[0].w,best=Math.max(...ws),diff=best-first,prs=s.filter((p,i)=>p.pr&&i>0).length;
+  pg.innerHTML=`<span>初回 <span class="num">${fmt(first,2)}kg</span> → 最高 <span class="big">${fmt(best,2)}kg</span></span>`+
+    (diff>0?`<span class="delta">+${fmt(diff,2)}kg</span>`:'')+`<span class="hint">${s.length}回記録 ・ 自己ベスト更新 ${prs}回</span>`;
+  pl.innerHTML=best>20?`<span>最高重量をバーベルで組むと（20kgバー・片側）</span>`+platesSvg(best):'';
+}
+function platesSvg(total){
+  const plates=[[25,'var(--lift)',64],[20,'var(--run)',64],[15,'var(--gold)',56],[10,'#3E8A4F',48],[5,'var(--muted)',38],[2.5,'var(--muted)',30],[1.25,'var(--muted)',24]];
+  let side=(total-20)/2,list=[];for(const[p,c,h]of plates){while(side>=p-1e-9){list.push([p,c,h]);side-=p}}
+  let x=4,g=`<rect x="0" y="33" width="${list.length*12+40}" height="6" rx="2" fill="var(--muted)"/>`;
+  x=14;for(const[p,c,h]of list){g+=`<rect x="${x}" y="${36-h/2}" width="10" height="${h}" rx="2" fill="${c}"><title>${p}kg</title></rect>`;x+=12}
+  return `<svg width="${list.length*12+44}" height="72" viewBox="0 0 ${list.length*12+44} 72" aria-hidden="true">${g}</svg><span class="num">${list.map(l=>l[0]).join(' + ')||'—'} kg</span>`;
+}
+function renderDistChart(){
+  const el=document.getElementById('d-chart'),t=TODAY(),m=monday(t),weeks=[];
+  for(let i=7;i>=0;i--){const s=addDays(m,-7*i);weeks.push({s,run:0,after:0})}
+  for(const r of data()){if(!r.cardio)continue;const d=parse(r.date);const wk=weeks.find(w=>d>=w.s&&d<addDays(w.s,7));if(!wk)continue;if(r.kind==='run')wk.run+=+r.cardio.km||0;else wk.after+=+r.cardio.km||0}
+  const W=640,H=200,L=40,R=12,T=18,B=30,max=Math.max(5,...weeks.map(w=>w.run+w.after));
+  const step=niceStep(max),top=Math.ceil(max/step)*step,bw=(W-L-R)/weeks.length;
+  const Y=v=>T+(top-v)/top*(H-T-B);let g='';
+  for(let v=0;v<=top+1e-9;v+=step)g+=`<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)"/><text x="${L-8}" y="${Y(v)+4}" text-anchor="end" font-size="11" fill="var(--muted)" font-family="IBM Plex Mono,monospace">${fmt(v)}</text>`;
+  g+=`<text x="${L-8}" y="${T-6}" text-anchor="end" font-size="10" fill="var(--muted)">km</text>`;
+  weeks.forEach((w,i)=>{const x=L+i*bw+bw*0.2,bwid=bw*0.6,tot=w.run+w.after;
+    if(w.run>0)g+=`<rect x="${x}" y="${Y(w.run)}" width="${bwid}" height="${Y(0)-Y(w.run)}" fill="var(--run)" rx="2"><title>ラン日 ${fmt(w.run)}km</title></rect>`;
+    if(w.after>0)g+=`<rect x="${x}" y="${Y(tot)}" width="${bwid}" height="${Y(w.run)-Y(tot)}" fill="var(--lift)" rx="2"><title>筋トレ後 ${fmt(w.after)}km</title></rect>`;
+    if(tot>0)g+=`<text x="${x+bwid/2}" y="${Y(tot)-5}" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink)" font-family="IBM Plex Mono,monospace">${fmt(tot)}</text>`;
+    g+=`<text x="${x+bwid/2}" y="${H-10}" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="IBM Plex Mono,monospace">${i===7?'今週':(w.s.getMonth()+1)+'/'+w.s.getDate()}</text>`});
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="週ごとの有酸素距離">${g}</svg>`;
+}
+function renderCal(){
+  const t=TODAY(),start=addDays(monday(t),-7*11),by={};
+  for(const r of data())(by[r.date]=by[r.date]||new Set()).add(r.kind);
+  let h='';for(let i=0;i<84;i++){const d=addDays(start,i),k=by[ymd(d)];let c='';if(d>t)c='future';else if(k){c=k.has('lift')?'lift':'run';if(k.has('lift')&&k.has('run'))c+=' both'}
+    h+=`<span class="${c}" title="${d.getMonth()+1}/${d.getDate()}"></span>`}
+  document.getElementById('cal').innerHTML=h;
+}
+
+/* ---------- history ---------- */
+let confirmId=null;
+function renderHist(){
+  const el=document.getElementById('hist'),list=sorted().reverse();
+  if(!list.length){el.innerHTML='<p class="empty">まだ記録がありません。</p>';return}
+  // compute PR flags chronologically
+  const best={},prSet=new Set();
+  for(const r of sorted())for(const e of r.exercises||[]){if(!(+e.weight>0))continue;if(best[e.name]!==undefined&&+e.weight>best[e.name])prSet.add(r.id+'|'+e.name);best[e.name]=Math.max(best[e.name]??0,+e.weight)}
+  let h='',cur='';
+  for(const r of list){
+    const d=parse(r.date),mk=d.getFullYear()+'年'+(d.getMonth()+1)+'月';
+    if(mk!==cur){h+=`<div class="month">${mk}</div>`;cur=mk}
+    let items='';
+    for(const e of r.exercises||[])items+=`<li><span class="tag lift">${esc(e.part)}</span>${esc(e.name)} <span class="num">${fmt(+e.weight,2)}kg × ${e.reps||'-'}回 × ${e.sets||'-'}セット</span>${prSet.has(r.id+'|'+e.name)?' <span class="tag pr">自己ベスト</span>':''}</li>`;
+    if(r.cardio)items+=`<li><span class="tag run">${r.kind==='run'?'ラン':'有酸素'}</span>${esc(r.cardio.type)} <span class="num">${fmt(+r.cardio.km||0,2)}km${r.cardio.min?' ・ '+r.cardio.min+'分':''}${r.cardio.min&&r.cardio.km?' ・ '+pace(r.cardio.min,r.cardio.km)+'/km':''}</span></li>`;
+    if(r.memo)items+=`<li class="memo">${esc(r.memo)}</li>`;
+    const acts=records.length?(confirmId===r.id
+      ?`<button class="btn danger" data-del="${r.id}" style="padding:5px 10px;font-size:12px">削除する</button><button class="linkbtn" data-cancel>やめる</button>`
+      :`<button class="linkbtn" data-edit="${r.id}">編集</button><button class="linkbtn" data-ask="${r.id}">削除</button>`):'';
+    h+=`<div class="entry"><div class="d">${d.getMonth()+1}/${d.getDate()}<small>${DOW[d.getDay()]}曜日</small></div><ul>${items}</ul><div class="acts">${acts}</div></div>`;
+  }
+  el.innerHTML=h;
+}
+function pace(min,km){const s=Math.round(min*60/km);return Math.floor(s/60)+"'"+pad(s%60)+'"'}
+
+/* ---------- form ---------- */
+const exList=document.getElementById('ex-list');
+function exRow(e={}){
+  const div=document.createElement('div');div.className='ex';const uid=Math.random().toString(36).slice(2,8);
+  div.innerHTML=`
+    <div class="field f-part"><label for="p-${uid}">部位</label><select id="p-${uid}" class="i-part">${PARTS.map(p=>`<option${p===e.part?' selected':''}>${p}</option>`).join('')}</select></div>
+    <div class="field f-name"><label for="n-${uid}">内容（種目）</label><input id="n-${uid}" class="i-name" list="dl-${Math.max(0,PARTS.indexOf(e.part||PARTS[0]))}" placeholder="候補から選ぶか入力" autocomplete="off" value="${esc(e.name||'')}"></div>
+    <div class="field"><label for="w-${uid}">重量kg</label><input id="w-${uid}" class="i-w" type="number" min="0" step="0.5" inputmode="decimal" value="${e.weight??''}"></div>
+    <div class="field"><label for="r-${uid}">回数</label><input id="r-${uid}" class="i-r" type="number" min="0" step="1" inputmode="numeric" value="${e.reps??''}"></div>
+    <div class="field"><label for="s-${uid}">セット</label><input id="s-${uid}" class="i-s" type="number" min="0" step="1" inputmode="numeric" value="${e.sets??''}"></div>
+    <button type="button" class="rm" aria-label="この種目を削除">×</button>
+    <div class="prev" hidden></div>`;
+  const name=div.querySelector('.i-name'),prev=div.querySelector('.prev'),partSel=div.querySelector('.i-part');
+  partSel.addEventListener('change',()=>{name.setAttribute('list','dl-'+PARTS.indexOf(partSel.value));const p=exerciseParts();if(name.value&&p[name.value.trim()]&&p[name.value.trim()]!==partSel.value){name.value='';prev.hidden=true}});
+  name.addEventListener('change',()=>{
+    const last=lastOf(name.value.trim());
+    if(last){if(last.part!==partSel.value){partSel.value=last.part;name.setAttribute('list','dl-'+PARTS.indexOf(last.part))}const w=div.querySelector('.i-w'),r=div.querySelector('.i-r'),s=div.querySelector('.i-s');
+      if(!w.value)w.value=last.weight;if(!r.value)r.value=last.reps||'';if(!s.value)s.value=last.sets||'';
+      prev.hidden=false;prev.textContent=`前回 ${parse(last.date).getMonth()+1}/${parse(last.date).getDate()}：${fmt(+last.weight,2)}kg × ${last.reps||'-'}回 × ${last.sets||'-'}セット ・ 自己ベスト ${fmt(bestOf(last.name),2)}kg`;}
+    else prev.hidden=true;
+  });
+  div.querySelector('.rm').addEventListener('click',()=>{div.remove();if(!exList.children.length)exList.appendChild(exRow())});
+  return div;
+}
+let editingId=null,editingCreated=null;
+function setEditUI(rec){
+  const bar=document.getElementById('edit-bar');
+  if(rec){const d=parse(rec.date);document.getElementById('edit-label').textContent=`${d.getMonth()+1}/${d.getDate()}（${DOW[d.getDay()]}）の記録を編集中`;bar.hidden=false;document.getElementById('save-btn').textContent='変更を保存'}
+  else{bar.hidden=true;document.getElementById('save-btn').textContent='記録を保存'}
+}
+function loadIntoForm(rec){
+  resetForm();editingId=rec.id;editingCreated=rec.createdAt||Date.now();
+  document.getElementById('f-date').value=rec.date;
+  document.getElementById(rec.kind==='run'?'k-run':'k-lift').checked=true;
+  if(rec.kind==='lift'){
+    exList.innerHTML='';for(const e of rec.exercises||[])exList.appendChild(exRow(e));if(!exList.children.length)exList.appendChild(exRow());
+    if(rec.cardio){document.getElementById(rec.cardio.type==='ジョギング'?'c-jog':'c-run').checked=true;document.getElementById('c-km').value=rec.cardio.km||'';document.getElementById('c-min').value=rec.cardio.min||''}
+  } else if(rec.cardio){
+    document.getElementById(rec.cardio.type==='ジョギング'?'r-jog':'r-run').checked=true;document.getElementById('r-km').value=rec.cardio.km||'';document.getElementById('r-min').value=rec.cardio.min||'';
+  }
+  document.getElementById('f-memo').value=rec.memo||'';
+  setEditUI(rec);syncForm();show('add');window.scrollTo(0,0);
+}
+document.getElementById('edit-cancel').addEventListener('click',()=>{resetForm();show('hist')});
+function resetForm(){
+  editingId=null;editingCreated=null;setEditUI(null);
+  document.getElementById('f-date').value=ymd(TODAY());
+  document.getElementById('k-lift').checked=true;document.getElementById('c-none').checked=true;document.getElementById('r-run').checked=true;
+  ['c-km','c-min','r-km','r-min','f-memo'].forEach(id=>document.getElementById(id).value='');
+  exList.innerHTML='';exList.appendChild(exRow());document.getElementById('f-err').textContent='';syncForm();
+}
+function syncForm(){
+  const lift=document.getElementById('k-lift').checked;
+  document.getElementById('lift-fields').hidden=!lift;document.getElementById('run-fields').hidden=lift;
+  document.getElementById('cardio-extra').hidden=document.getElementById('c-none').checked;
+  document.getElementById('ex-datalists').innerHTML=PARTS.map((p,i)=>{
+    const names=[...new Set([...exerciseNames(p),...PRESETS[p]])];
+    return `<datalist id="dl-${i}">${names.map(n=>`<option value="${esc(n)}">`).join('')}</datalist>`}).join('');
+}
+document.getElementById('form').addEventListener('change',e=>{if(e.target.name==='kind'||e.target.name==='cardio')syncForm()});
+document.getElementById('add-ex').addEventListener('click',()=>{const r=exRow();exList.appendChild(r);r.querySelector('.i-name').focus()});
+document.getElementById('form').addEventListener('submit',async e=>{
+  e.preventDefault();const err=document.getElementById('f-err');err.textContent='';
+  const date=document.getElementById('f-date').value;if(!date){err.textContent='実施日を入れてください。';return}
+  const kind=document.querySelector('input[name=kind]:checked').value;
+  const wasEdit=!!editingId;
+  const rec={id:editingId||'w'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),date,kind,exercises:[],cardio:null,memo:document.getElementById('f-memo').value.trim(),createdAt:editingCreated||Date.now()};
+  if(kind==='lift'){
+    for(const row of exList.children){const name=row.querySelector('.i-name').value.trim();if(!name)continue;
+      rec.exercises.push({part:row.querySelector('.i-part').value,name,weight:+row.querySelector('.i-w').value||0,reps:+row.querySelector('.i-r').value||0,sets:+row.querySelector('.i-s').value||0})}
+    if(!rec.exercises.length){err.textContent='種目を1つ以上入れてください（内容の欄）。';return}
+    const ct=document.querySelector('input[name=cardio]:checked').value;
+    if(ct){const km=+document.getElementById('c-km').value;if(!(km>0)){err.textContent='有酸素運動の距離を入れてください。';return}
+      rec.cardio={type:ct,km,min:+document.getElementById('c-min').value||0}}
+  } else {
+    const km=+document.getElementById('r-km').value;if(!(km>0)){err.textContent='走った距離を入れてください。';return}
+    rec.cardio={type:document.querySelector('input[name=runtype]:checked').value,km,min:+document.getElementById('r-min').value||0};
+  }
+  // PR check against your own records only
+  const prs=wasEdit?[]:rec.exercises.filter(x=>{const b=bestOfReal(x.name,rec.id);return b>0&&x.weight>b});
+  const btn=document.getElementById('save-btn');btn.disabled=true;
+  try{await persist(rec)}catch(ex){err.textContent='保存できませんでした。通信状態を確認して、もう一度保存してください。';btn.disabled=false;return}
+  btn.disabled=false;
+  if(prs.length){toast(`自己ベスト更新！ ${prs[0].name} ${fmt(prs[0].weight,2)}kg`,true);selEx=prs[0].name;selPart=null}
+  else toast(wasEdit?'変更を保存しました':kind==='lift'?'筋トレを記録しました':'ランを記録しました');
+  resetForm();show(wasEdit?'hist':'home');
+});
+function bestOfReal(name,excludeId){let b=0;for(const r of records)if(r.id!==excludeId)for(const e of r.exercises||[])if(e.name===name)b=Math.max(b,+e.weight||0);return b}
+
+/* ---------- ui ---------- */
+let toastT;function toast(msg,pr){const t=document.getElementById('toast');t.textContent=msg;t.className='toast'+(pr?' pr':'');t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,pr?3500:2200)}
+function show(tab){
+  for(const b of document.querySelectorAll('.tabs button'))b.setAttribute('aria-selected',b.dataset.tab===tab);
+  document.getElementById('view-home').hidden=tab!=='home';document.getElementById('view-add').hidden=tab!=='add';document.getElementById('view-hist').hidden=tab!=='hist';
+  if(tab==='add')syncForm();
+}
+document.querySelector('.tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(b)show(b.dataset.tab)});
+document.getElementById('part-chips').addEventListener('click',e=>{const b=e.target.closest('[data-part]');if(!b)return;selPart=b.dataset.part;selEx=null;renderChips();renderWeightChart()});
+document.getElementById('ex-chips').addEventListener('click',e=>{const b=e.target.closest('[data-ex]');if(!b)return;selEx=b.dataset.ex;renderChips();renderWeightChart()});
+document.getElementById('hist').addEventListener('click',async e=>{
+  const a=e.target.closest('[data-ask]'),d=e.target.closest('[data-del]'),c=e.target.closest('[data-cancel]'),ed=e.target.closest('[data-edit]');
+  if(ed){const r=records.find(x=>x.id===ed.dataset.edit);if(r)loadIntoForm(r);return}
+  if(a){confirmId=a.dataset.ask;renderHist()}
+  else if(c){confirmId=null;renderHist()}
+  else if(d){try{await remove(d.dataset.del);confirmId=null;renderHist();toast('削除しました')}catch(ex){toast('削除できませんでした。もう一度試してください。')}}
+});
+function renderAll(){
+  document.getElementById('sample-banner').hidden=records.length>0;
+  renderStats();renderChips();renderWeightChart();renderDistChart();renderCal();renderHist();
+}
+
+records=loadLocal();
+resetForm();renderAll();
+connect();
+</script>
